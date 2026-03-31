@@ -38,6 +38,7 @@ void offStopButtonLED()
     if(g_stopBtnState == STATE_STOP_BTN_ON)
     {
         g_stopBtnState = STATE_STOP_BTN_OFF;
+        g_disabledStopBtnState = STATE_DISABLED_STOP_BTN_OFF;
         IfxPort_setPinLow(STOP_LED_1.port, STOP_LED_1.pinIndex); // LED OFF
     }
 }
