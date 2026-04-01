@@ -1,0 +1,31 @@
+OUTPUT_DIRECTORY       = ./build/docs
+USE_MDFILE_AS_MAINPAGE = ./docs/mainpage.md
+
+INPUT                  = driver_ecu_can.h \
+                         door_ecu_can.h \
+                         driver_with_door_protocol.h \
+                         ./docs/mainpage.md
+
+FILE_PATTERNS          = *.h *.c *.md
+RECURSIVE              = NO
+
+OPTIMIZE_OUTPUT_FOR_C  = YES
+MARKDOWN_SUPPORT       = YES
+USE_MDFILE_AS_MAINPAGE = mainpage.md
+
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+WARNINGS               = YES
+QUIET                  = NO
+
+<!-- 
+GENERATE_LATEX         = YES
+USE_PDFLATEX           = YES
+LATEX_CMD_NAME         = xelatex
+LATEX_EXTRA_STYLESHEET = korean_fonts.sty 
+-->
+
+GENERATE_TREEVIEW      = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+SHOW_INCLUDE_FILES     = YES
