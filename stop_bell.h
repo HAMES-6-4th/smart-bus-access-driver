@@ -10,6 +10,9 @@
 #include "IfxPort_PinMap.h"
 #include "IfxScuEru.h"
 #include "IfxSrc.h"
+#include "IfxStm.h"
+
+#include <stdbool.h>
 
 #include "state.h"
 #include "macro.h"

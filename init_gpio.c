@@ -26,12 +26,16 @@ void initGPIO()
 {
     // LED 출력 설정
     IfxPort_setPinModeOutput(STOP_LED_1.port, STOP_LED_1.pinIndex, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+    IfxPort_setPinModeOutput(LED_1.port, LED_1.pinIndex, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+    IfxPort_setPinModeOutput(LED_2.port, LED_2.pinIndex, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
 
     // 하차벨 초기화 버튼 입력 설정 + 내부 풀업 활성화
     IfxPort_setPinMode(STOP_BTN_OFF.port, STOP_BTN_OFF.pinIndex, IfxPort_Mode_inputPullUp);
 
     // 부저 출력 설정
     IfxPort_setPinModeOutput(BUZZER.port, BUZZER.pinIndex, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+
+
 }
 
 /*********************************************************************************************************************/

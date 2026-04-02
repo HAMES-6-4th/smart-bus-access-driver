@@ -11,6 +11,14 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 extern StopBtnState g_stopBtnState;
+extern DisabledStopBtnState g_disabledStopBtnState;
+
+extern bool buzzerOn;
+extern uint32 buzzerStart;
+
+extern uint8 monitorFlags;
+
+
 /*********************************************************************************************************************/
 
 /*********************************************************************************************************************/
@@ -28,8 +36,9 @@ void onStopButtonLED(void)
     if(g_stopBtnState == STATE_STOP_BTN_OFF)
     {
         g_stopBtnState = STATE_STOP_BTN_ON;
-        playBuzzer();
         IfxPort_setPinHigh(STOP_LED_1.port, STOP_LED_1.pinIndex); // LED ON
+        monitorFlags |= 0x10;
+        playBuzzer();
     }
 }
 
@@ -40,14 +49,15 @@ void offStopButtonLED()
         g_stopBtnState = STATE_STOP_BTN_OFF;
         g_disabledStopBtnState = STATE_DISABLED_STOP_BTN_OFF;
         IfxPort_setPinLow(STOP_LED_1.port, STOP_LED_1.pinIndex); // LED OFF
+        monitorFlags &= 0xEF;
     }
 }
 
 void playBuzzer()
 {
-    IfxPort_setPinHigh(BUZZER.port, BUZZER.pinIndex); // 부저 ON
-    for(volatile int i=0; i<15000000; i++);            // 짧게 딜레이 (간단한 tone)
-    IfxPort_setPinLow(BUZZER.port, BUZZER.pinIndex);  // 부저 OFF
+    IfxPort_setPinHigh(BUZZER.port, BUZZER.pinIndex);
+    buzzerOn = true;
+    buzzerStart = IfxStm_get(&MODULE_STM0);
 }
 
 /*********************************************************************************************************************/

@@ -109,11 +109,11 @@ void initAudioModule(IfxAsclin_Tx_Out* pTxPort, IfxAsclin_Rx_In* pRxPort, void* 
 
     IfxAsclin_Asc_initModuleConfig(&ascConfig, pAsclinModule);
 
-    ascConfig.clockSource = IfxAsclin_ClockSource_kernelClock;
+    //ascConfig.clockSource = IfxAsclin_ClockSource_kernelClock;
     ascConfig.baudrate.baudrate = AUDIO_MODULE_BAUD_RATE;
     ascConfig.interrupt.txPriority = INTPRIO_ASCLIN_TX;
     ascConfig.interrupt.rxPriority = INTPRIO_ASCLIN_RX;
-    ascConfig.interrupt.typeOfService = IfxSrc_Tos_cpu0;
+    ascConfig.interrupt.typeOfService = 0;
 
     // 핀 설정
     const IfxAsclin_Asc_Pins pins = {

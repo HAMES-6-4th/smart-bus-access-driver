@@ -143,7 +143,7 @@ void initMonitor(IfxI2c_Scl_InOut* pSCLPort, IfxI2c_Sda_InOut* pSDAPort, void* p
 
 void writeBytes(const uint8* pData, Ifx_SizeT size)
 {
-    IfxI2c_I2c_write(&monitorModuleHandle, (uint8*)pData, size);
+    IfxI2c_I2c_write2(&monitorModuleHandle, (uint8*)pData, size);
 }
 
 void writeBytesToExpander(uint8 data)
