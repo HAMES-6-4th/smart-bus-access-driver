@@ -14,7 +14,7 @@ extern StopBtnState g_stopBtnState;
 extern DisabledStopBtnState g_disabledStopBtnState;
 
 extern bool buzzerOn;
-extern uint32 buzzerStart;
+extern uint64 buzzerStart;
 
 extern uint8 monitorFlags;
 

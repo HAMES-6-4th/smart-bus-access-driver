@@ -78,7 +78,7 @@ volatile bool stopBtnPressed = false;
 volatile bool disabledStopBtnPressed = false;
 
 volatile bool buzzerOn = false;
-uint32 buzzerStart = 0;
+uint64 buzzerStart = 0;
 
 void initERU();
 
