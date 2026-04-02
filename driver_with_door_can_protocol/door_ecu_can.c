@@ -2,7 +2,8 @@
 
 #include <string.h>
 
-static void DoorEcuCanBuildOpenParams(CANSocketOpenParams *params, const DoorECUCANConfig *config)
+static void DoorEcuCanBuildOpenParams(CANSocketOpenParams *params,
+                                      const DoorECUCANConfig *config)
 {
     CANSocketInitOpenParamsClassic500k(params);
 
@@ -42,13 +43,14 @@ void doorECUCANInitConfig(DoorECUCANConfig *config)
 CANStatus doorECUCANOpen(DoorECUCAN *ecu, const DoorECUCANConfig *config)
 {
     CANSocketOpenParams open_params;
+    CANStatus status;
 
     if ((ecu == 0) || (config == 0) || (config->port_name == 0))
     {
         return CAN_STATUS_EINVAL;
     }
 
-    if (CANSocketGetCoreConst(&ecu->socket) != 0)
+    if (ecu->is_open)
     {
         return CAN_STATUS_EBUSY;
     }
@@ -57,17 +59,31 @@ CANStatus doorECUCANOpen(DoorECUCAN *ecu, const DoorECUCANConfig *config)
     memset(&ecu->status_cache, 0, sizeof(ecu->status_cache));
     DoorEcuCanBuildOpenParams(&open_params, config);
 
-    return CANSocketOpen(&ecu->socket, &open_params);
+    status = CANSocketOpen(&ecu->socket, &open_params);
+    if (status == CAN_STATUS_OK)
+    {
+        ecu->is_open = true;
+    }
+
+    return status;
 }
 
 CANStatus doorECUCANClose(DoorECUCAN *ecu)
 {
+    CANStatus status;
+
     if (ecu == 0)
     {
         return CAN_STATUS_EINVAL;
     }
 
-    return CANSocketClose(&ecu->socket);
+    status = CANSocketClose(&ecu->socket);
+    if (status == CAN_STATUS_OK)
+    {
+        ecu->is_open = false;
+    }
+
+    return status;
 }
 
 CANStatus doorECUCANPollCommand(DoorECUCAN *ecu, uint32_t now_ms, bool *updated)
@@ -96,7 +112,9 @@ CANStatus doorECUCANPollCommand(DoorECUCAN *ecu, uint32_t now_ms, bool *updated)
         return status;
     }
 
-    if ((frame.id_type != CAN_ID_STANDARD) || (frame.id != DOOR_CAN_ID_COMMAND) || (frame.len < 1U))
+    if ((frame.id_type != CAN_ID_STANDARD) ||
+        (frame.id != DOOR_CAN_ID_COMMAND) ||
+        (frame.len < 1U))
     {
         return CAN_STATUS_EINVAL;
     }
@@ -105,6 +123,7 @@ CANStatus doorECUCANPollCommand(DoorECUCAN *ecu, uint32_t now_ms, bool *updated)
     ecu->command.last_command_rx_ms = now_ms;
     ecu->command.door_command = DriverWithDoorCanGetDoorCommand(frame.data[0]);
     ecu->command.ramp_command = DriverWithDoorCanGetRampCommand(frame.data[0]);
+    ecu->command.ramp_manual = DriverWithDoorCanGetRampManual(frame.data[0]);
     ecu->command.emergency_stop = DriverWithDoorCanGetEmergencyStop(frame.data[0]);
     ecu->command.reset_fault = DriverWithDoorCanGetResetFault(frame.data[0]);
 
@@ -150,6 +169,7 @@ void doorECUCANForceSafeCommand(DoorECUCAN *ecu)
 
     ecu->command.door_command = DOOR_CMD_STOP;
     ecu->command.ramp_command = RAMP_CMD_STOP;
+    ecu->command.ramp_manual = false;
     ecu->command.emergency_stop = false;
     ecu->command.reset_fault = false;
 }
