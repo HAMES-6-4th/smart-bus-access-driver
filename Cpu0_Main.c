@@ -25,26 +25,6 @@ IFX_ALIGN(4) IfxCpu_syncEvent cpuSyncEvent = 0;
 static DriverECUCAN g_driver_can;
 static uint32_t g_ticks_per_ms = 0U;
 
-static void AppInitTickSource(void)
-{
-    const uint32_t stm_hz = (uint32_t)IfxStm_getFrequency(BSP_DEFAULT_TIMER);
-    g_ticks_per_ms = stm_hz / 1000U;
-}
-
-static uint32_t AppGetNowMs(void)
-{
-    const uint64_t now_ticks = IfxStm_get(BSP_DEFAULT_TIMER);
-    return (uint32_t)(now_ticks / (uint64_t)g_ticks_per_ms);
-}
-
-// 실제 GPIO 읽기 함수로 바꿔야 함
-static void AppReadInputs(void)
-{
-    // 예시:
-    // g_door_open_sw_pressed = (IfxPort_getPinState(...) == 0);
-    //
-}
-
 void AppInit(void)
 {
     DriverECUCANConfig cfg;
