@@ -15,6 +15,9 @@
 #include "audio_module.h"
 #include "monitor_module.h"
 #include "driver_ecu_can.h"
+#include "fire_detect_module.h"
+#include "ble_uart.h"
+#include "ble_uart_tc375_lite.h"
 
 IFX_ALIGN(4) IfxCpu_syncEvent cpuSyncEvent = 0;
 
@@ -121,9 +124,12 @@ void core0_main(void)
     // 초기 설정
     monitorFlags = 0x00;
 
-    // 1초 주기를 위한 설정 (500ms)
-    uint32 ticksFor5Sec = IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 500);
-    uint32 lastTick = IfxStm_get(&MODULE_STM0);
+    //ble 설정
+    bleUartTc375Init();
+
+    uint8_t cmd;
+
+
 
     while (1)
     {
@@ -169,6 +175,16 @@ void core0_main(void)
             {
                 monitorFlags &= 0xDF;
             }
+
+
+            if(st->ramp_state == RAMP_CMD_DEPLOY)
+            {
+                slopeState = STATE_SLOPE_OPEN;
+                slopeRequest = STATE_SLOPE_NONE;
+
+                monitorFlags |= 0x40;
+            }
+
             (void)st;
         }
 
@@ -247,6 +263,32 @@ void core0_main(void)
             playSlopeCloseSound();
             slopeState = STATE_SLOPE_CLOSE;
             slopeRequest = STATE_SLOPE_NONE;
+        }
+
+
+        /*****************  화재 감지  ***********************/
+        if(isFireDetected() == true)
+        {
+            doorRequest = STATE_DOOR_OPEN; // 문 열어
+            // 삐용삐용 추가 필요
+        }
+
+
+        /***************** BLE 하차벨 감지 ********************/
+        bleUartTc375Poll();
+        if (bleUartTc375ConsumeCmd(&cmd) != 0u)
+        {
+            uint8_t doorReq  = bleUartCmdGetDoor(cmd);
+            uint8_t slopeReq = bleUartCmdGetSlope(cmd);
+
+            if(doorReq == BLE_UART_REQ_OPEN)
+            {
+                stopBtnPressed = true;
+            }
+            if(slopeReq == BLE_UART_REQ_OPEN)
+            {
+                disabledStopBtnPressed = true;
+            }
         }
     }
 }

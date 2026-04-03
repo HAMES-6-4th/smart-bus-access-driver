@@ -27,15 +27,15 @@ void initERU()
     IfxScuWdt_clearSafetyEndinitInline(password);
 
     /*일반 하차벨 버튼 인터럽트 설정 */
-    //Port 02.1을 Pull-Down Input으로 Set
-    MODULE_P02.IOCR0.B.PC1 = 0x01;
+    //Port 02.1을 Pull-Up Input으로 Set
+    MODULE_P02.IOCR0.B.PC1 = 0x02;
 
     /* EICR.EXIS 레지스터 설정 : ERS2, 1번 신호 */
     MODULE_SCU.EICR[1].B.EXIS0 = 1;
 
     /* rising, falling edge 트리거 설정 */
-    MODULE_SCU.EICR[1].B.REN0 = 1;
-    MODULE_SCU.EICR[1].B.FEN0 = 0;
+    MODULE_SCU.EICR[1].B.REN0 = 0;
+    MODULE_SCU.EICR[1].B.FEN0 = 1;
 
     // Channel 2의 Trigger Event 활성화
     MODULE_SCU.EICR[1].B.EIEN0 = 1;
@@ -57,15 +57,15 @@ void initERU()
 
 
     /*장애인 하차벨 버튼 인터럽트 설정 */
-    //Port 02.0을 Pull-Down Input으로 Set
-    MODULE_P02.IOCR0.B.PC0 = 0x01;
+    //Port 02.0을 Pull-Up Input으로 Set
+    MODULE_P02.IOCR0.B.PC0 = 0x02;
 
     /* EICR.EXIS 레지스터 설정 */
     MODULE_SCU.EICR[1].B.EXIS1 = 2;   //
 
     /* rising, falling edge 트리거 설정 */
-    MODULE_SCU.EICR[1].B.REN1 = 1;    //
-    MODULE_SCU.EICR[1].B.FEN1 = 0;    //
+    MODULE_SCU.EICR[1].B.REN1 = 0;    //
+    MODULE_SCU.EICR[1].B.FEN1 = 1;    //
 
     // Channel 2의 Trigger Event 활성화
     MODULE_SCU.EICR[1].B.EIEN1 = 1;   //
@@ -87,15 +87,15 @@ void initERU()
 
     /* 문열기 버튼 인터럽트 */
 
-    // Port 15.4를 Pull-Down Input으로 Set
-    MODULE_P15.IOCR4.B.PC4 = 0x01;
+    // Port 15.4를 Pull-Up Input으로 Set
+    MODULE_P15.IOCR4.B.PC4 = 0x02;
 
     /* EICR0.EXIS0 : ERS0, In00 */
     MODULE_SCU.EICR[0].B.EXIS0 = 0;
 
     /* rising edge 트리거 */
-    MODULE_SCU.EICR[0].B.REN0 = 1;
-    MODULE_SCU.EICR[0].B.FEN0 = 0;
+    MODULE_SCU.EICR[0].B.REN0 = 0;
+    MODULE_SCU.EICR[0].B.FEN0 = 1;
 
     // Trigger Event 활성화
     MODULE_SCU.EICR[0].B.EIEN0 = 1;
@@ -117,15 +117,15 @@ void initERU()
 
     /* 문 닫기 버튼 인터럽트 */
 
-    // Port 15.5을 Pull-Down Input으로 Set
-    MODULE_P15.IOCR4.B.PC5 = 0x01;
+    // Port 15.5을 Pull-Up Input으로 Set
+    MODULE_P15.IOCR4.B.PC5 = 0x02;
 
     /* EICR2.EXIS0 : ERS4, In40 */
     MODULE_SCU.EICR[2].B.EXIS0 = 3;
 
     /* rising edge 트리거 */
-    MODULE_SCU.EICR[2].B.REN0 = 1;
-    MODULE_SCU.EICR[2].B.FEN0 = 0;
+    MODULE_SCU.EICR[2].B.REN0 = 0;
+    MODULE_SCU.EICR[2].B.FEN0 = 1;
 
     // Trigger Event 활성화
     MODULE_SCU.EICR[2].B.EIEN0 = 1;
