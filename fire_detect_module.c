@@ -80,6 +80,7 @@ void initFireDetectModule(Ifx_P* pPortGroup, uint32 portNum);
 void updateFireDetectModule(void);
 boolean isFireDetected(void);
 
+
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
@@ -138,9 +139,9 @@ static sint32 readDHT11()
     // 인터럽트 차단
     boolean intState = IfxCpu_disableInterrupts();
 
-    if(!waitUntilLevel(FALSE, 100)) { IfxCpu_restoreInterrupts(intState); return -1; }
-    if(!waitUntilLevel(TRUE, 100))  { IfxCpu_restoreInterrupts(intState); return -2; }
-    if(!waitUntilLevel(FALSE, 100)) { IfxCpu_restoreInterrupts(intState); return -3; }
+    if(!waitUntilLevel(FALSE, 200)) { IfxCpu_restoreInterrupts(intState); return -1; }
+    if(!waitUntilLevel(TRUE, 200))  { IfxCpu_restoreInterrupts(intState); return -2; }
+    if(!waitUntilLevel(FALSE, 200)) { IfxCpu_restoreInterrupts(intState); return -3; }
 
     /* 5bytes 읽어오기 */
     uint8 data[5] = { 0, 0, 0, 0, 0 };
@@ -199,6 +200,7 @@ void initFireDetectModule(Ifx_P* pPortGroup, uint32 portNum)
     delayMs(1500);
 }
 
+
 void updateFireDetectModule(void)
 {
     gFireDetectModuleState = readDHT11();
@@ -207,10 +209,9 @@ void updateFireDetectModule(void)
         gIsFireDetected = TRUE;
     }
 
-    delayMs(1000);
+    delayMs(2000);
 }
 
 boolean isFireDetected(void) {
     return gIsFireDetected;
 }
-

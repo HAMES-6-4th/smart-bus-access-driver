@@ -5,7 +5,7 @@
 #include "IfxPort.h"
 #include "IfxSrc.h"
 
-#define BLE_UART_TC375_ASC_BAUDRATE            ((uint32_t)115200u)
+#define BLE_UART_TC375_ASC_BAUDRATE            ((uint32_t)9600u)
 
 #define BLE_UART_TC375_ASC_TX_ISR_PRIORITY     (40u)
 #define BLE_UART_TC375_ASC_RX_ISR_PRIORITY     (41u)
@@ -129,9 +129,9 @@ void bleUartTc375Init(void)
     g_bleUartTc375Context.pending_cmd = bleUartMakeCmd(BLE_UART_REQ_NOP, BLE_UART_REQ_NOP);
 }
 
+volatile    uint8 g_byte;
 void bleUartTc375Poll(void)
 {
-    uint8 byte;
     Ifx_SizeT count;
     BleUartDecodedFrame decoded;
     int parse_result;
@@ -144,12 +144,12 @@ void bleUartTc375Poll(void)
     for (;;)
     {
         count = 1u;
-        if (IfxAsclin_Asc_read(&g_bleUartTc375Asc, &byte, &count, 0u) != TRUE)
+        if (IfxAsclin_Asc_read(&g_bleUartTc375Asc, &g_byte, &count, 0u) != TRUE)
         {
             break;
         }
 
-        parse_result = bleUartParserFeed(&g_bleUartParser, byte, &decoded);
+        parse_result = bleUartParserFeed(&g_bleUartParser, g_byte, &decoded);
         if (parse_result == BLE_UART_PARSE_OK)
         {
             bleUartTc375HandleDecodedFrame(&decoded);

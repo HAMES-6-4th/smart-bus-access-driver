@@ -61,7 +61,7 @@ static uint32_t DriverEcuGetNowMs(void)
 
     return (uint32_t)((ticks * 1000u) / freq_hz);
 }
-
+//set
 /*********************************************/
 
 // 하차벨 상태
@@ -82,6 +82,8 @@ volatile bool disabledStopBtnPressed = false;
 
 volatile bool buzzerOn = false;
 uint64 buzzerStart = 0;
+
+volatile bool obstacleDetected = false;
 
 void initERU();
 
@@ -130,7 +132,7 @@ void core0_main(void)
     uint8_t cmd;
 
 
-
+    uint8 gTemp = 0;
     while (1)
     {
         // 하차벨 초기화 버튼
@@ -139,7 +141,7 @@ void core0_main(void)
             offStopButtonLED();
         }
 
-        bool updated = FALSE;
+        bool updated = false;
         if(doorState == STATE_DOOR_OPEN)
         {
             monitorFlags |= 0x80;
@@ -170,10 +172,12 @@ void core0_main(void)
             if(st->pinch_detected == true)
             {
                 monitorFlags |= 0x20;
+                obstacleDetected = true;
             }
             else
             {
                 monitorFlags &= 0xDF;
+                obstacleDetected = false;
             }
 
 
@@ -184,6 +188,32 @@ void core0_main(void)
 
                 monitorFlags |= 0x40;
             }
+
+            if(st->ramp_state == RAMP_CMD_STOW)
+            {
+                slopeState = STATE_SLOPE_CLOSE;
+                slopeRequest = STATE_SLOPE_NONE;
+
+                monitorFlags &= 0xBF;
+            }
+
+
+            if(st->door_state == DOOR_CMD_OPEN)
+            {
+                slopeState = STATE_DOOR_OPEN;
+                slopeRequest = STATE_DOOR_NONE;
+
+                monitorFlags |= 0x80;
+            }
+
+            if(st->door_state == DOOR_CMD_CLOSE)
+            {
+                slopeState = STATE_DOOR_CLOSE;
+                slopeRequest = STATE_DOOR_NONE;
+
+                monitorFlags &= 0x7F;
+            }
+
 
             (void)st;
         }
@@ -270,7 +300,7 @@ void core0_main(void)
         if(isFireDetected() == true)
         {
             doorRequest = STATE_DOOR_OPEN; // 문 열어
-            // 삐용삐용 추가 필요
+            playFireAlarmSound(); // 삐용삐용 알람음
         }
 
 
@@ -315,6 +345,7 @@ void doorControlBtnISR(void)
     }
     else
     {
+        if(obstacleDetected == true) return; // 장애물 있으면 문 못 닫음
         doorRequest = STATE_DOOR_CLOSE;
     }
 }
@@ -328,6 +359,7 @@ void slopeControlBtnISR(void)
     }
     else
     {
+        if(obstacleDetected == true) return; // 장애물 있으면 슬로프 못 닫음
         slopeRequest = STATE_SLOPE_CLOSE;
     }
 }
