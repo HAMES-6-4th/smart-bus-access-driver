@@ -31,7 +31,7 @@ extern uint8 monitorFlags;
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
-void onStopButtonLED(void)
+void onStopButton(void)
 {
     if(g_stopBtnState == STATE_STOP_BTN_OFF)
     {
@@ -42,7 +42,7 @@ void onStopButtonLED(void)
     }
 }
 
-void offStopButtonLED()
+void offStopButton()
 {
     if(g_stopBtnState == STATE_STOP_BTN_ON)
     {

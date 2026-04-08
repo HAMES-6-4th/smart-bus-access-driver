@@ -26,7 +26,6 @@ IFX_ALIGN(4) IfxCpu_syncEvent cpuSyncEvent = 0;
 #define BOARD_TC375_LITE
 #endif
 static DriverECUCAN g_driver_can;
-static uint32_t g_ticks_per_ms = 0U;
 
 void AppInit(void)
 {
@@ -70,11 +69,15 @@ volatile StopBtnState g_stopBtnState = STATE_STOP_BTN_OFF;
 volatile DisabledStopBtnState g_disabledStopBtnState = STATE_DISABLED_STOP_BTN_OFF;
 
 // 문 상태
-volatile DoorState_t doorState = STATE_DOOR_CLOSE;   // 실제 상태
-volatile DoorState_t doorRequest = STATE_DOOR_NONE;  // 요청
+volatile DoorState doorState = DOOR_STATE_CLOSED;
 
-volatile SlopeState slopeState = STATE_SLOPE_CLOSE;
-volatile SlopeState slopeRequest = STATE_SLOPE_NONE;
+volatile RampState slopeState = RAMP_STATE_STOWED;
+
+volatile bool doorOpenReq = false;
+volatile bool doorCloseReq = false;
+
+volatile bool slopeOpenReq = false;
+volatile bool slopeCloseReq = false;
 
 
 volatile bool stopBtnPressed = false;
@@ -84,6 +87,8 @@ volatile bool buzzerOn = false;
 uint64 buzzerStart = 0;
 
 volatile bool obstacleDetected = false;
+
+volatile bool fireAlarmActive = false;
 
 void initERU();
 
@@ -138,31 +143,30 @@ void core0_main(void)
         // 하차벨 초기화 버튼
         if (IfxPort_getPinState(STOP_BTN_OFF.port, STOP_BTN_OFF.pinIndex) == 0) // 안 누르면
         {
-            offStopButtonLED();
+            offStopButton();
         }
 
-        bool updated = false;
-        if(doorState == STATE_DOOR_OPEN)
+        if(doorState == DOOR_STATE_OPENED)
         {
             monitorFlags |= 0x80;
         }
-        else if(doorState == STATE_DOOR_CLOSE)
+        else if(doorState == DOOR_STATE_CLOSED)
         {
             monitorFlags &= 0x7F;
         }
 
         // 슬로프 상태 확인
-        if(slopeState == STATE_SLOPE_OPEN)
+        if(slopeState == RAMP_STATE_DEPLOYED)
         {
             monitorFlags |= 0x40;
         }
-        else if(slopeState == STATE_SLOPE_CLOSE)
+        else if(slopeState == RAMP_STATE_STOWED)
         {
             monitorFlags &= 0xBF;
         }
 
-        updated = false;
-
+        /*************** CAN 통신 수신 ***************/
+        bool updated = false;
         uint32 now_ms = DriverEcuGetNowMs();
         (void)driverECUCANPollStatus(&g_driver_can, now_ms, &updated);
         if (updated)
@@ -181,50 +185,80 @@ void core0_main(void)
             }
 
 
-            if(st->ramp_state == RAMP_CMD_DEPLOY)
-            {
-                slopeState = STATE_SLOPE_OPEN;
-                slopeRequest = STATE_SLOPE_NONE;
-
-                monitorFlags |= 0x40;
-            }
-
-            if(st->ramp_state == RAMP_CMD_STOW)
-            {
-                slopeState = STATE_SLOPE_CLOSE;
-                slopeRequest = STATE_SLOPE_NONE;
-
-                monitorFlags &= 0xBF;
-            }
-
-
-            if(st->door_state == DOOR_CMD_OPEN)
-            {
-                slopeState = STATE_DOOR_OPEN;
-                slopeRequest = STATE_DOOR_NONE;
-
-                monitorFlags |= 0x80;
-            }
-
-            if(st->door_state == DOOR_CMD_CLOSE)
-            {
-                slopeState = STATE_DOOR_CLOSE;
-                slopeRequest = STATE_DOOR_NONE;
-
-                monitorFlags &= 0x7F;
-            }
+            doorState  = (DoorState)st->door_state;
+            slopeState = (RampState)st->ramp_state;
 
 
             (void)st;
         }
 
+        /*************** CAN 통신 송신 ***************/
+        if(doorOpenReq)
+        {
+            doorOpenReq = false;
 
+            if(g_disabledStopBtnState == STATE_DISABLED_STOP_BTN_ON)
+            {
+                // 장애인 하차벨이 ON인 경우에는 전동문과 슬로프 둘 다 같이 열어야 됨
+                (void)driverECUCANSendCommand(&g_driver_can,
+                                             DOOR_CMD_OPEN,
+                                             RAMP_CMD_DEPLOY,
+                                             true, false, false);
+            }
+            else
+            {
+            (void)driverECUCANSendCommand(&g_driver_can,
+                                         DOOR_CMD_OPEN,
+                                         RAMP_CMD_NOP,
+                                         false, false, false);
+            }
+
+            offStopButton(); // 하차벨 끄기 (LED / 상태 OFF + 모니터링 마스킹)
+            playDoorOpenSound();
+        }
+
+        if(doorCloseReq)
+        {
+            doorCloseReq = false;
+
+            (void)driverECUCANSendCommand(&g_driver_can,
+                                         DOOR_CMD_CLOSE,
+                                         RAMP_CMD_NOP,
+                                         false, false, false);
+
+            playDoorCloseSound();
+        }
+
+        if(slopeOpenReq)
+        {
+            slopeOpenReq = false;
+
+            (void)driverECUCANSendCommand(&g_driver_can,
+                                         DOOR_CMD_NOP,
+                                         RAMP_CMD_DEPLOY,
+                                         true, false, false);
+
+            playSlopeOpenSound();
+        }
+
+        if(slopeCloseReq)
+        {
+            slopeCloseReq = false;
+
+            (void)driverECUCANSendCommand(&g_driver_can,
+                                         DOOR_CMD_NOP,
+                                         RAMP_CMD_STOW,
+                                         true, false, false);
+
+            playSlopeCloseSound();
+        }
+        /****************************************/
 
         // 하차벨 눌림
         if(stopBtnPressed)
         {
             stopBtnPressed = false;
-            onStopButtonLED();
+            onStopButton();
         }
 
         if(disabledStopBtnPressed)
@@ -235,7 +269,7 @@ void core0_main(void)
                 g_disabledStopBtnState = STATE_DISABLED_STOP_BTN_ON;
                 if(g_stopBtnState == STATE_STOP_BTN_OFF)
                 {
-                    onStopButtonLED();
+                    onStopButton();
                 }else
                 {
                     playBuzzer();
@@ -253,54 +287,21 @@ void core0_main(void)
             }
         }
 
-        if (doorRequest == STATE_DOOR_OPEN)
-        {
-            if(g_disabledStopBtnState == STATE_DISABLED_STOP_BTN_ON) // 장애인 하차벨이 들어와 있으면
-            {
-                (void)driverECUCANSendCommand(&g_driver_can, DOOR_CMD_OPEN, RAMP_CMD_DEPLOY, true, false, false); // 문과 슬로프 둘 다 열어
-                slopeState = STATE_SLOPE_OPEN;
-            }
-            else
-                (void)driverECUCANSendCommand(&g_driver_can, DOOR_CMD_OPEN, RAMP_CMD_NOP, true, false, false); // 문만 열어
-            offStopButtonLED();
-
-            playDoorOpenSound();
-            doorState = STATE_DOOR_OPEN;
-            doorRequest = STATE_DOOR_NONE;
-        }
-        else if (doorRequest == STATE_DOOR_CLOSE)
-        {
-            // 문 닫는 명렁 ( 슬로프가 열려 있는 경우이는 전동문에서 알아서 슬로프도 접을 것임 (slop_manual은 false로 주었기 때문)
-            (void)driverECUCANSendCommand(&g_driver_can, DOOR_CMD_CLOSE, RAMP_CMD_NOP, false, false, false);  // CAN 통신으로 전동문 ECU에 명령 날리기 (문 닫아)
-
-            if(slopeState == STATE_SLOPE_OPEN) slopeState = STATE_SLOPE_CLOSE;
-
-            playDoorCloseSound();
-            doorState = STATE_DOOR_CLOSE;
-            doorRequest = STATE_DOOR_NONE;
-        }
-
-        if (slopeRequest == STATE_SLOPE_OPEN)
-        {
-            (void)driverECUCANSendCommand(&g_driver_can, DOOR_CMD_NOP, RAMP_CMD_DEPLOY, true, false, false);  // CAN 통신으로 전동문 ECU에 명령 날리기 (슬로프 열어)
-            playSlopeOpenSound();
-            slopeState = STATE_SLOPE_OPEN;
-            slopeRequest = STATE_SLOPE_NONE;
-        }
-        else if (slopeRequest == STATE_SLOPE_CLOSE)
-        {
-            (void)driverECUCANSendCommand(&g_driver_can, DOOR_CMD_NOP, RAMP_CMD_STOW, true, false, false);  // CAN 통신으로 전동문 ECU에 명령 날리기 (슬로프 닫아)
-            playSlopeCloseSound();
-            slopeState = STATE_SLOPE_CLOSE;
-            slopeRequest = STATE_SLOPE_NONE;
-        }
-
-
         /*****************  화재 감지  ***********************/
         if(isFireDetected() == true)
         {
-            doorRequest = STATE_DOOR_OPEN; // 문 열어
-            playFireAlarmSound(); // 삐용삐용 알람음
+            if(fireAlarmActive == false)
+            {
+                playFireAlarmSound();
+                fireAlarmActive = true;
+
+                (void)driverECUCANSendCommand(&g_driver_can, DOOR_CMD_OPEN, RAMP_CMD_NOP, true, false, false); // 문 열어
+                monitorFlags |= 0x80; // 문 열림 모니터링
+            }
+        }
+        else
+        {
+            fireAlarmActive = false;
         }
 
 
@@ -334,32 +335,33 @@ void onDisabledStopBtnISR(void)
     disabledStopBtnPressed = true;
 }
 
+// 수동 - false / 자동 - true
 void doorControlBtnISR(void)
 {
-    IfxPort_setPinHigh(LED_2.port, LED_2.pinIndex); // LED OFF
+    IfxPort_setPinHigh(LED_2.port, LED_2.pinIndex);
 
-
-    if (doorState == STATE_DOOR_CLOSE)
+    if (doorState == DOOR_STATE_CLOSED)
     {
-        doorRequest = STATE_DOOR_OPEN;
+        doorOpenReq = true;
     }
-    else
+    else if (doorState == DOOR_STATE_OPENED)
     {
-        if(obstacleDetected == true) return; // 장애물 있으면 문 못 닫음
-        doorRequest = STATE_DOOR_CLOSE;
+        if(obstacleDetected) return; // 장애물 감지 중에는 문 닫기 금지
+        doorCloseReq = true;
     }
 }
 
 void slopeControlBtnISR(void)
 {
-    IfxPort_setPinLow(LED_2.port, LED_2.pinIndex); // 내장 LED2 킴
-    if(slopeState == STATE_SLOPE_CLOSE)
+    IfxPort_setPinLow(LED_2.port, LED_2.pinIndex);
+
+    if(slopeState == RAMP_STATE_STOWED)
     {
-        slopeRequest = STATE_SLOPE_OPEN;
+        slopeOpenReq = true;
     }
-    else
+    else if(slopeState == RAMP_STATE_DEPLOYED)
     {
-        if(obstacleDetected == true) return; // 장애물 있으면 슬로프 못 닫음
-        slopeRequest = STATE_SLOPE_CLOSE;
+        if(obstacleDetected) return; // 슬로프 감지 중에는 슬로프 닫기 금지
+        slopeCloseReq = true;
     }
 }

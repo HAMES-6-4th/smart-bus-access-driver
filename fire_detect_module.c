@@ -205,7 +205,7 @@ void updateFireDetectModule(void)
 {
     gFireDetectModuleState = readDHT11();
 
-    if((float)((float)gTempList[9] / (float)gTempList[5]) > FIRE_THRESHOLD) {
+    if(gTemp > 40) {
         gIsFireDetected = TRUE;
     }
 
